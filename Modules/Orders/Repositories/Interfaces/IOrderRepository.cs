@@ -5,6 +5,6 @@ namespace TicketApi.Modules.Orders.Repositories.Interfaces
         /// <summary>
         /// Checks if the given order belongs to the specified user.
         /// </summary>
-        bool IsOwnedByUser(int orderId, int userId);
+        Task<bool> IsOwnedByUserAsync(int orderId, int userId);
     }
 }

@@ -16,117 +16,76 @@ namespace TicketApi.Modules.Identity.Controllers
             _userService = userService;
         }
 
-        // GET api/user
+        // GET api/users
         [HttpGet]
         [HasPermission(Permissions.Users.Read)]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var users = _userService.GetAll();
+            var users = await _userService.GetAllAsync();
             return Ok(users);
         }
 
-        // GET api/user/{id}
+        // GET api/users/{id}
         [HttpGet("{id:int}")]
         [HasPermission(Permissions.Users.Read)]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var user = _userService.GetById(id);
-                return Ok(user);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            var user = await _userService.GetByIdAsync(id);
+            return Ok(user);
         }
 
-        // PUT api/user/{id}
+        // PUT api/users/{id}
         [HttpPut("{id:int}")]
         [HasPermission(Permissions.Users.Write)]
-        public IActionResult Update(int id, [FromBody] UpdateUserDto request)
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto request)
         {
-            try
-            {
-                _userService.Update(id, request);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+            await _userService.UpdateAsync(id, request);
+            return NoContent();
         }
 
-        // PATCH api/user/{id}/status
+        // PATCH api/users/{id}/status
         [HttpPatch("{id:int}/status")]
         [HasPermission(Permissions.Users.Write)]
-        public IActionResult UpdateStatus(int id, [FromBody] UpdateUserStatusDto request)
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateUserStatusDto request)
         {
-            try
-            {
-                _userService.UpdateStatus(id, request);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            await _userService.UpdateStatusAsync(id, request);
+            return NoContent();
         }
 
-        // GET api/user/{id}/roles
+        // GET api/users/{id}/roles
         [HttpGet("{id:int}/roles")]
         [HasPermission(Permissions.Users.Read)]
-        public IActionResult GetRoles(int id)
+        public async Task<IActionResult> GetRoles(int id)
         {
-            try
-            {
-                var roles = _userService.GetRoles(id);
-                return Ok(roles);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            var roles = await _userService.GetRolesAsync(id);
+            return Ok(roles);
         }
 
-        // PUT api/user/{userId}/roles/{roleId}
-        [HttpPut("{userId:int}/roles/{roleId:int}")]
+        // POST api/users/{userId}/roles/{roleId}
+        [HttpPost("{userId:int}/roles/{roleId:int}")]
         [HasPermission(Permissions.Users.Write)]
-        public IActionResult AssignRole(int userId, int roleId)
+        public async Task<IActionResult> AssignRole(int userId, int roleId)
         {
-            try
-            {
-                _userService.AssignRole(userId, roleId);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+            await _userService.AssignRoleAsync(userId, roleId);
+            return NoContent();
         }
 
-        // GET api/user/{userId}/permissions
+        // DELETE api/users/{userId}/roles/{roleId}
+        [HttpDelete("{userId:int}/roles/{roleId:int}")]
+        [HasPermission(Permissions.Users.Write)]
+        public async Task<IActionResult> RemoveRole(int userId, int roleId)
+        {
+            await _userService.RemoveRoleAsync(userId, roleId);
+            return NoContent();
+        }
+
+        // GET api/users/{userId}/permissions
         [HttpGet("{userId:int}/permissions")]
         [HasPermission(Permissions.Users.Read)]
-        public IActionResult GetPermissions(int userId)
+        public async Task<IActionResult> GetPermissions(int userId)
         {
-            try
-            {
-                var permissions = _userService.GetPermissions(userId);
-                return Ok(permissions);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+            var permissions = await _userService.GetPermissionsAsync(userId);
+            return Ok(permissions);
         }
     }
 }

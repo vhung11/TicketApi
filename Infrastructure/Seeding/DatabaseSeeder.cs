@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TicketApi.Infrastructure.Context;
 using TicketApi.Modules.Identity.Entities;
 using TicketApi.Modules.Orders.Entities;
@@ -13,26 +14,26 @@ namespace TicketApi.Infrastructure.Seeding
         private const string AdminPassword = "Admin@123";
         private const string AdminDisplayName = "System Administrator";
 
-        public static void Seed(ApplicationDbContext context)
+        public static async Task SeedAsync(ApplicationDbContext context)
         {
-            context.Database.EnsureCreated();
+            await context.Database.EnsureCreatedAsync();
 
             var permissionDefinitions = GetPermissionDefinitions();
-            var rolesByName = EnsureRoles(context);
-            var permissionsByCode = EnsurePermissions(context, permissionDefinitions);
+            var rolesByName = await EnsureRolesAsync(context);
+            var permissionsByCode = await EnsurePermissionsAsync(context, permissionDefinitions);
 
-            EnsureRolePermissions(
+            await EnsureRolePermissionsAsync(
                 context,
                 rolesByName,
                 permissionsByCode);
 
-            EnsureUsers(context, rolesByName);
-            EnsureSampleData(context);
+            await EnsureUsersAsync(context, rolesByName);
+            await EnsureSampleDataAsync(context);
         }
 
-        private static Dictionary<string, Role> EnsureRoles(ApplicationDbContext context)
+        private static async Task<Dictionary<string, Role>> EnsureRolesAsync(ApplicationDbContext context)
         {
-            var existingRoles = context.Roles.ToDictionary(r => r.Name);
+            var existingRoles = await context.Roles.ToDictionaryAsync(r => r.Name);
             var roleNames = new[] { AdminRoleName, UserRoleName };
 
             foreach (var roleName in roleNames)
@@ -54,17 +55,17 @@ namespace TicketApi.Infrastructure.Seeding
 
             if (context.ChangeTracker.HasChanges())
             {
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
 
             return existingRoles;
         }
 
-        private static Dictionary<string, Permission> EnsurePermissions(
+        private static async Task<Dictionary<string, Permission>> EnsurePermissionsAsync(
             ApplicationDbContext context,
             IEnumerable<(string Code, string Resource)> definitions)
         {
-            var existingPermissions = context.Permissions.ToDictionary(p => p.Code);
+            var existingPermissions = await context.Permissions.ToDictionaryAsync(p => p.Code);
 
             foreach (var (code, resource) in definitions)
             {
@@ -86,19 +87,19 @@ namespace TicketApi.Infrastructure.Seeding
 
             if (context.ChangeTracker.HasChanges())
             {
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
 
             return existingPermissions;
         }
 
-        private static void EnsureRolePermissions(
+        private static async Task EnsureRolePermissionsAsync(
             ApplicationDbContext context,
             IReadOnlyDictionary<string, Role> rolesByName,
             IReadOnlyDictionary<string, Permission> permissionsByCode)
         {
-            var existingPairs = context.RolePermissions
-                .AsEnumerable()
+            var existingPairsList = await context.RolePermissions.ToListAsync();
+            var existingPairs = existingPairsList
                 .Select(rp => (rp.RoleId, rp.PermissionId))
                 .ToHashSet();
 
@@ -106,7 +107,7 @@ namespace TicketApi.Infrastructure.Seeding
             var adminPermissionIds = permissionsByCode.Values
                 .Select(permission => permission.Id)
                 .ToHashSet();
-            SyncRolePermissions(context, existingPairs, adminRole.Id, adminPermissionIds);
+            await SyncRolePermissionsAsync(context, existingPairs, adminRole.Id, adminPermissionIds);
 
             var userRole = rolesByName[UserRoleName];
             var userPermissionCodes = new[]
@@ -121,21 +122,21 @@ namespace TicketApi.Infrastructure.Seeding
                 .Where(permissionsByCode.ContainsKey)
                 .Select(code => permissionsByCode[code].Id)
                 .ToHashSet();
-            SyncRolePermissions(context, existingPairs, userRole.Id, userPermissionIds);
+            await SyncRolePermissionsAsync(context, existingPairs, userRole.Id, userPermissionIds);
 
             if (context.ChangeTracker.HasChanges())
             {
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
         }
 
-        private static void EnsureUsers(
+        private static async Task EnsureUsersAsync(
             ApplicationDbContext context,
             IReadOnlyDictionary<string, Role> rolesByName)
         {
-            var existingUsers = context.Users.ToDictionary(u => u.Email);
-            var existingAssignments = context.UserRoles
-                .AsEnumerable()
+            var existingUsers = await context.Users.ToDictionaryAsync(u => u.Email);
+            var existingAssignmentsList = await context.UserRoles.ToListAsync();
+            var existingAssignments = existingAssignmentsList
                 .Select(ur => (ur.UserId, ur.RoleId))
                 .ToHashSet();
             var createdAdminUser = false;
@@ -162,7 +163,7 @@ namespace TicketApi.Infrastructure.Seeding
 
             if (createdAdminUser)
             {
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
 
             var adminRole = rolesByName[AdminRoleName];
@@ -177,13 +178,13 @@ namespace TicketApi.Infrastructure.Seeding
 
             if (context.ChangeTracker.HasChanges())
             {
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
         }
 
-        private static void EnsureSampleData(ApplicationDbContext context)
+        private static async Task EnsureSampleDataAsync(ApplicationDbContext context)
         {
-            if (context.Concerts.Any()) return;
+            if (await context.Concerts.AnyAsync()) return;
 
             var concerts = new List<Concert>
             {
@@ -197,7 +198,7 @@ namespace TicketApi.Infrastructure.Seeding
             };
 
             context.Concerts.AddRange(concerts);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
             foreach (var concert in concerts)
             {
@@ -246,7 +247,7 @@ namespace TicketApi.Infrastructure.Seeding
                 context.Tickets.AddRange(tickets);
             }
 
-            context.SaveChanges();
+            await context.SaveChangesAsync();
         }
 
         private static void AddRolePermissionIfMissing(
@@ -267,15 +268,15 @@ namespace TicketApi.Infrastructure.Seeding
             });
         }
 
-        private static void SyncRolePermissions(
+        private static async Task SyncRolePermissionsAsync(
             ApplicationDbContext context,
             ISet<(int RoleId, int PermissionId)> existingPairs,
             int roleId,
             ISet<int> expectedPermissionIds)
         {
-            var rolePermissions = context.RolePermissions
+            var rolePermissions = await context.RolePermissions
                 .Where(rp => rp.RoleId == roleId)
-                .ToList();
+                .ToListAsync();
 
             foreach (var rolePermission in rolePermissions)
             {

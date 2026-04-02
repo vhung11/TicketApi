@@ -24,7 +24,7 @@ namespace TicketApi.Modules.Identity.Authorization
         }
     }
 
-    public class HasPermissionFilter : IAuthorizationFilter
+    public class HasPermissionFilter : IAsyncAuthorizationFilter
     {
         private readonly string[] _requiredPermissions;
         private readonly IPermissionService _permissionService;
@@ -35,7 +35,7 @@ namespace TicketApi.Modules.Identity.Authorization
             _permissionService = permissionService;
         }
 
-        public void OnAuthorization(AuthorizationFilterContext context)
+        public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
         {
             var userId = GetUserId(context.HttpContext.User);
 
@@ -52,7 +52,7 @@ namespace TicketApi.Modules.Identity.Authorization
             // Check that user has ALL required permissions
             foreach (var permission in _requiredPermissions)
             {
-                if (!_permissionService.HasPermission(userId.Value, permission))
+                if (!await _permissionService.HasPermissionAsync(userId.Value, permission))
                 {
                     context.Result = new ObjectResult(new
                     {

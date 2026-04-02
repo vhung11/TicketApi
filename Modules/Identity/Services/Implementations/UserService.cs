@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using TicketApi.Infrastructure.Context;
 using TicketApi.Modules.Identity.DTOs;
 using TicketApi.Modules.Identity.Entities;
 using TicketApi.Modules.Identity.Repositories.Interfaces;
@@ -10,26 +8,19 @@ namespace TicketApi.Modules.Identity.Services.Implementations
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IRoleRepository _roleRepository;
-        private readonly IPermissionRepository _permissionRepository;
-        private readonly ApplicationDbContext _context;
 
         public UserService(
-            IUserRepository userRepository,
-            IRoleRepository roleRepository,
-            IPermissionRepository permissionRepository,
-            ApplicationDbContext context)
+            IUserRepository userRepository
+            )
         {
             _userRepository = userRepository;
-            _roleRepository = roleRepository;
-            _permissionRepository = permissionRepository;
-            _context = context;
         }
 
         // ─── GET ALL ─────────────────────────────────────────────────────────────
-        public IEnumerable<UserDto> GetAll()
+        public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
-            return _userRepository.GetAll().Select(u => new UserDto
+            var users = await _userRepository.GetAllAsync();
+            return users.Select(u => new UserDto
             {
                 Id = u.Id,
                 Username = u.Name,
@@ -39,10 +30,9 @@ namespace TicketApi.Modules.Identity.Services.Implementations
         }
 
         // ─── GET BY ID ────────────────────────────────────────────────────────────
-        public UserDto GetById(int id)
+        public async Task<UserDto> GetByIdAsync(int id)
         {
-            var user = _userRepository.GetById(id)
-                ?? throw new KeyNotFoundException($"User with id {id} not found.");
+            var user = await GetUserOrThrowAsync(id);
 
             return new UserDto
             {
@@ -54,15 +44,14 @@ namespace TicketApi.Modules.Identity.Services.Implementations
         }
 
         // ─── UPDATE ───────────────────────────────────────────────────────────────
-        public void Update(int id, UpdateUserDto request)
+        public async Task UpdateAsync(int id, UpdateUserDto request)
         {
-            var user = _userRepository.GetById(id)
-                ?? throw new KeyNotFoundException($"User with id {id} not found.");
+            var user = await GetUserOrThrowAsync(id);
 
             // Check email uniqueness if changed
             if (!string.Equals(user.Email, request.Email, StringComparison.OrdinalIgnoreCase))
             {
-                var existing = _userRepository.GetByEmail(request.Email);
+                var existing = await _userRepository.GetByEmailAsync(request.Email);
                 if (existing != null)
                     throw new InvalidOperationException("Email is already in use by another account.");
             }
@@ -71,94 +60,23 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             user.Email = request.Email;
 
             _userRepository.Update(user);
-            _userRepository.SaveChanges();
+            await _userRepository.SaveChangesAsync();
         }
 
         // ─── UPDATE STATUS ────────────────────────────────────────────────────────
-        public void UpdateStatus(int id, UpdateUserStatusDto request)
+        public async Task UpdateStatusAsync(int id, UpdateUserStatusDto request)
         {
-            var user = _userRepository.GetById(id)
-                ?? throw new KeyNotFoundException($"User with id {id} not found.");
+            var user = await GetUserOrThrowAsync(id);
 
             user.IsActive = request.IsActive;
 
             _userRepository.Update(user);
-            _userRepository.SaveChanges();
+            await _userRepository.SaveChangesAsync();
         }
 
-        // ─── GET ROLES ────────────────────────────────────────────────────────────
-        public IEnumerable<RoleDto> GetRoles(int userId)
-        {
-            _ = _userRepository.GetById(userId)
+        // ─── HELPERS ─────────────────────────────────────────────────────────
+        private async Task<User> GetUserOrThrowAsync(int userId) =>
+            await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException($"User with id {userId} not found.");
-
-            return _context.UserRoles
-                .Where(ur => ur.UserId == userId)
-                .Include(ur => ur.Role)
-                .Select(ur => new RoleDto
-                {
-                    Id = ur.Role.Id,
-                    Name = ur.Role.Name,
-                    IsActive = ur.Role.IsActive
-                })
-                .ToList();
-        }
-
-        // ─── ASSIGN ROLE ──────────────────────────────────────────────────────────
-        public void AssignRole(int userId, int roleId)
-        {
-            _ = _userRepository.GetById(userId)
-                ?? throw new KeyNotFoundException($"User with id {userId} not found.");
-
-            var role = _roleRepository.GetById(roleId)
-                ?? throw new KeyNotFoundException($"Role with id {roleId} not found.");
-
-            bool alreadyAssigned = _context.UserRoles
-                .Any(ur => ur.UserId == userId && ur.RoleId == roleId);
-
-            if (alreadyAssigned)
-                throw new InvalidOperationException($"User already has role '{role.Name}'.");
-
-            _context.UserRoles.Add(new UserRole { UserId = userId, RoleId = roleId });
-            _context.SaveChanges();
-        }
-
-        // ─── GET PERMISSIONS ──────────────────────────────────────────────────────
-        public IEnumerable<PermissionDto> GetPermissions(int userId)
-        {
-            _ = _userRepository.GetById(userId)
-                ?? throw new KeyNotFoundException($"User with id {userId} not found.");
-
-            // Permissions via roles
-            var roleIds = _context.UserRoles
-                .Where(ur => ur.UserId == userId)
-                .Select(ur => ur.RoleId)
-                .ToList();
-
-            var viaRoles = _context.RolePermissions
-                .Where(rp => roleIds.Contains(rp.RoleId))
-                .Include(rp => rp.Permissions)
-                .Select(rp => rp.Permissions)
-                .ToList();
-
-            // Permissions directly assigned
-            var directly = _context.UserPermissions
-                .Where(up => up.UserId == userId)
-                .Include(up => up.Permissions)
-                .Select(up => up.Permissions)
-                .ToList();
-
-            return viaRoles
-                .Union(directly)
-                .DistinctBy(p => p.Id)
-                .Select(p => new PermissionDto
-                {
-                    Id = p.Id,
-                    Code = p.Code,
-                    Resource = p.Resource,
-                    IsActive = p.IsActive
-                })
-                .ToList();
-        }
     }
 }

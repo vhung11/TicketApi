@@ -14,9 +14,9 @@ namespace TicketApi.Modules.Identity.Repositories.Implementations
             _context = context;
         }
 
-        public T? GetById(int id) => DbSet.Find(id);
+        public async Task<T?> GetByIdAsync(int id) => await DbSet.FindAsync(id);
 
-        public IEnumerable<T> GetAll() => DbSet.ToList();
+        public async Task<IEnumerable<T>> GetAllAsync() => await DbSet.ToListAsync();
 
         public void Add(T entity) => DbSet.Add(entity);
 
@@ -24,6 +24,6 @@ namespace TicketApi.Modules.Identity.Repositories.Implementations
 
         public virtual void Delete(T entity) => DbSet.Remove(entity);
 
-        public int SaveChanges() => _context.SaveChanges();
+        public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
     }
 }

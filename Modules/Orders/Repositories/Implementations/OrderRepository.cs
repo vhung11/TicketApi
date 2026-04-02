@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TicketApi.Infrastructure.Context;
 using TicketApi.Modules.Orders.Repositories.Interfaces;
 
@@ -12,9 +13,9 @@ namespace TicketApi.Modules.Orders.Repositories.Implementations
             _context = context;
         }
 
-        public bool IsOwnedByUser(int orderId, int userId)
+        public async Task<bool> IsOwnedByUserAsync(int orderId, int userId)
         {
-            return _context.Orders.Any(o => o.Id == orderId && o.UserId == userId);
+            return await _context.Orders.AnyAsync(o => o.Id == orderId && o.UserId == userId);
         }
     }
 }

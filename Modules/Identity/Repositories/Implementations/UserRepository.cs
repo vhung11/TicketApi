@@ -14,6 +14,6 @@ namespace TicketApi.Modules.Identity.Repositories.Implementations
 
         protected override DbSet<User> DbSet => _context.Users;
 
-        public User? GetByEmail(string email) => DbSet.FirstOrDefault(u => u.Email == email);
+        public async Task<User?> GetByEmailAsync(string email) => await DbSet.FirstOrDefaultAsync(u => u.Email == email);
     }
 }

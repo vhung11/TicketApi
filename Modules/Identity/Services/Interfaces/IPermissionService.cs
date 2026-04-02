@@ -5,6 +5,6 @@ namespace TicketApi.Modules.Identity.Services.Interfaces
         /// <summary>
         /// Checks if a user has a specific permission code.
         /// </summary>
-        bool HasPermission(int userId, string permissionCode);
+        Task<bool> HasPermissionAsync(int userId, string permissionCode);
     }
 }

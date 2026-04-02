@@ -29,7 +29,7 @@ namespace TicketApi.Modules.Identity.Authorization
         }
     }
 
-    public class CheckResourceOwnerFilter : IAuthorizationFilter
+    public class CheckResourceOwnerFilter : IAsyncAuthorizationFilter
     {
         private readonly string _resourceType;
         private readonly string _routeParam;
@@ -45,7 +45,7 @@ namespace TicketApi.Modules.Identity.Authorization
             _resourceOwnerService = resourceOwnerService;
         }
 
-        public void OnAuthorization(AuthorizationFilterContext context)
+        public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
         {
             var userId = GetUserId(context.HttpContext.User);
 
@@ -71,7 +71,7 @@ namespace TicketApi.Modules.Identity.Authorization
                 return;
             }
 
-            if (!_resourceOwnerService.IsOwner(userId.Value, _resourceType, resourceId))
+            if (!await _resourceOwnerService.IsOwnerAsync(userId.Value, _resourceType, resourceId))
             {
                 context.Result = new ObjectResult(new
                 {

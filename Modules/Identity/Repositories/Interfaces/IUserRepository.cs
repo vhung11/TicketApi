@@ -4,6 +4,6 @@ namespace TicketApi.Modules.Identity.Repositories.Interfaces
 {
     public interface IUserRepository : IBaseRepository<User>
     {
-        User? GetByEmail(string email);
+        Task<User?> GetByEmailAsync(string email);
     }
 }

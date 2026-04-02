@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketApi.Modules.Identity.DTOs;
@@ -18,61 +17,24 @@ namespace TicketApi.Modules.Identity.Controllers
         }
 
         [HttpPost("register")]
-        public ActionResult Register([FromBody] RegisterRequestDto request)
+        public async Task<ActionResult> Register([FromBody] RegisterRequestDto request)
         {
-            try
-            {
-                _authService.Register(request);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            await _authService.RegisterAsync(request);
+            return Ok();
         }
 
         [HttpPost("login")]
-        public ActionResult<AuthResponseDto> Login([FromBody] LoginRequestDto request)
+        public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginRequestDto request)
         {
-            try
-            {
-                var response = _authService.Login(request);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var response = await _authService.LoginAsync(request);
+            return Ok(response);
         }
 
         [Authorize]
         [HttpGet("me")]
-        public ActionResult<UserDto> GetCurrentUser()
+        public async Task<ActionResult<UserDto>> GetCurrentUser()
         {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                    ?? User.FindFirstValue("sub");
-
-                if (!int.TryParse(userIdClaim, out var userId))
-                {
-                    return Unauthorized(new { message = "Invalid or missing user identity." });
-                }
-
-                return Ok(_authService.GetCurrentUser(userId));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return Ok(await _authService.GetCurrentUserAsync(User));
         }
     }
 }

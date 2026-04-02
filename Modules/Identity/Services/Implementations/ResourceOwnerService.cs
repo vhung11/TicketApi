@@ -18,22 +18,23 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             _orderRepository = orderRepository;
         }
 
-        public bool IsAdmin(int userId)
+        public async Task<bool> IsAdminAsync(int userId)
         {
-            return _roleRepository.IsUserInRole(userId, AdminRoleName);
+            var roles = await _roleRepository.GetRolesAsync(userId);
+            return roles.Any(r => r.Name == AdminRoleName);
         }
 
-        public bool IsOwner(int userId, string resourceType, int resourceId)
+        public async Task<bool> IsOwnerAsync(int userId, string resourceType, int resourceId)
         {
             // Admin bypasses ownership check for all resource types
-            if (IsAdmin(userId))
+            if (await IsAdminAsync(userId))
             {
                 return true;
             }
 
             return resourceType switch
             {
-                "Order" => _orderRepository.IsOwnedByUser(resourceId, userId),
+                "Order" => await _orderRepository.IsOwnedByUserAsync(resourceId, userId),
                 _ => false
             };
         }

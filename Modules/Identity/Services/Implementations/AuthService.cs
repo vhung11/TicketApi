@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using TicketApi.Modules.Identity.DTOs;
 using TicketApi.Modules.Identity.Entities;
 using TicketApi.Modules.Identity.Repositories.Interfaces;
@@ -18,15 +19,15 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             _tokenService = tokenService;
         }
 
-        public void Register(RegisterRequestDto request)
+        public async Task RegisterAsync(RegisterRequestDto request)
         {
-            var existingUser = _userRepository.GetByEmail(request.Email);
+            var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser != null)
             {
                 throw new InvalidOperationException("User with this email already exists.");
             }
 
-            var defaultRole = _roleRepository.GetByName("User")
+            var defaultRole = await _roleRepository.GetByNameAsync("User")
                 ?? throw new InvalidOperationException("Default role 'User' not found. Run database seeder first.");
 
             var user = new User
@@ -36,15 +37,15 @@ namespace TicketApi.Modules.Identity.Services.Implementations
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 IsActive = true
             };
-            
+
             user.UserRoles.Add(new UserRole { RoleId = defaultRole.Id });
             _userRepository.Add(user);
-            _userRepository.SaveChanges();
+            await _userRepository.SaveChangesAsync();
         }
 
-        public AuthResponseDto Login(LoginRequestDto request)
+        public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
         {
-            var user = _userRepository.GetByEmail(request.Email);
+            var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 throw new UnauthorizedAccessException("Invalid email or password.");
@@ -59,20 +60,26 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             return new AuthResponseDto { Token = token };
         }
 
-        public UserDto GetCurrentUser(int userId)
+        public async Task<UserDto> GetCurrentUserAsync(ClaimsPrincipal claimsPrincipal)
         {
-            var user = _userRepository.GetById(userId);
-            if (user == null)
+            var userIdClaim = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? claimsPrincipal.FindFirstValue("sub");
+
+            if (!int.TryParse(userIdClaim, out var userId))
             {
-                throw new KeyNotFoundException("User not found.");
+                throw new UnauthorizedAccessException("Invalid or missing user identity.");
             }
+
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new KeyNotFoundException("User not found.");
 
             return new UserDto
             {
                 Id = user.Id,
                 Username = user.Name,
                 Email = user.Email,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList()
             };
         }
     }

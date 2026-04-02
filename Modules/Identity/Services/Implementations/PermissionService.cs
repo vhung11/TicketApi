@@ -12,9 +12,9 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             _permissionRepository = permissionRepository;
         }
 
-        public bool HasPermission(int userId, string permissionCode)
+        public async Task<bool> HasPermissionAsync(int userId, string permissionCode)
         {
-            return _permissionRepository.UserHasPermission(userId, permissionCode);
+            return await _permissionRepository.UserHasPermissionAsync(userId, permissionCode);
         }
     }
 }
