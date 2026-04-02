@@ -22,7 +22,7 @@ namespace TicketApi.Modules.Identity.Repositories.Implementations
 
         public void Update(T entity) => DbSet.Update(entity);
 
-        public virtual void Delete(T entity) => DbSet.Remove(entity);
+        public void Delete(T entity) => DbSet.Remove(entity);
 
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
     }

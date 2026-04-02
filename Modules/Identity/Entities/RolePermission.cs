@@ -4,6 +4,6 @@ namespace TicketApi.Modules.Identity.Entities
     {
         public int RoleId { get; set; }
         public int PermissionId { get; set; }
-        public Permission Permissions { get; set; } = null!;
+        public Permission Permission { get; set; } = null!;
     }
 }

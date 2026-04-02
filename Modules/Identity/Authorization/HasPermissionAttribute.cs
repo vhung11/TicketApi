@@ -27,12 +27,12 @@ namespace TicketApi.Modules.Identity.Authorization
     public class HasPermissionFilter : IAsyncAuthorizationFilter
     {
         private readonly string[] _requiredPermissions;
-        private readonly IPermissionService _permissionService;
+        private readonly IUserService _userService;
 
-        public HasPermissionFilter(string[] permissions, IPermissionService permissionService)
+        public HasPermissionFilter(string[] permissions, IUserService userService)
         {
             _requiredPermissions = permissions;
-            _permissionService = permissionService;
+            _userService = userService;
         }
 
         public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
@@ -50,9 +50,9 @@ namespace TicketApi.Modules.Identity.Authorization
             }
 
             // Check that user has ALL required permissions
-            foreach (var permission in _requiredPermissions)
+            foreach (var permissionCode in _requiredPermissions)
             {
-                if (!await _permissionService.HasPermissionAsync(userId.Value, permission))
+                if (!await _userService.HasPermissionAsync(userId.Value, permissionCode))
                 {
                     context.Result = new ObjectResult(new
                     {

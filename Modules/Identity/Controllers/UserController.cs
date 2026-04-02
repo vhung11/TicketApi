@@ -87,5 +87,23 @@ namespace TicketApi.Modules.Identity.Controllers
             var permissions = await _userService.GetPermissionsAsync(userId);
             return Ok(permissions);
         }
+
+        // POST api/users/{userId}/permissions/{permissionId}
+        [HttpPost("{userId:int}/permissions/{permissionId:int}")]
+        [HasPermission(Permissions.Users.Write)]
+        public async Task<IActionResult> AssignPermission(int userId, int permissionId)
+        {
+            await _userService.AssignPermissionAsync(userId, permissionId);
+            return NoContent();
+        }
+
+        // DELETE api/users/{userId}/permissions/{permissionId}
+        [HttpDelete("{userId:int}/permissions/{permissionId:int}")]
+        [HasPermission(Permissions.Users.Write)]
+        public async Task<IActionResult> RemovePermission(int userId, int permissionId)
+        {
+            await _userService.RemovePermissionAsync(userId, permissionId);
+            return NoContent();
+        }
     }
 }

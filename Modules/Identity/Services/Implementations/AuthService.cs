@@ -19,7 +19,7 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             _tokenService = tokenService;
         }
 
-        public async Task RegisterAsync(RegisterRequestDto request)
+        public async Task<int> RegisterAsync(RegisterRequestDto request)
         {
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser != null)
@@ -41,6 +41,7 @@ namespace TicketApi.Modules.Identity.Services.Implementations
             user.UserRoles.Add(new UserRole { RoleId = defaultRole.Id });
             _userRepository.Add(user);
             await _userRepository.SaveChangesAsync();
+            return user.Id;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)

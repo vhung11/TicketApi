@@ -6,21 +6,21 @@ namespace TicketApi.Modules.Identity.Services.Implementations
 {
     public class ResourceOwnerService : IResourceOwnerService
     {
-        private readonly IRoleRepository _roleRepository;
+        private readonly IUserService _userService;
         private readonly IOrderRepository _orderRepository;
         private const string AdminRoleName = "Admin";
 
         public ResourceOwnerService(
-            IRoleRepository roleRepository,
+            IUserService userService,
             IOrderRepository orderRepository)
         {
-            _roleRepository = roleRepository;
+            _userService = userService;
             _orderRepository = orderRepository;
         }
 
         public async Task<bool> IsAdminAsync(int userId)
         {
-            var roles = await _roleRepository.GetRolesAsync(userId);
+            var roles = await _userService.GetRolesAsync(userId);
             return roles.Any(r => r.Name == AdminRoleName);
         }
 

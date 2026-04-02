@@ -15,32 +15,21 @@ namespace TicketApi.Modules.Identity.Repositories.Implementations
 
         protected override DbSet<Role> DbSet => _context.Roles;
 
-        public async Task<Role?> GetByNameAsync(string name) => await DbSet.FirstOrDefaultAsync(r => r.Name == name);
+        public async Task<Role?> GetByNameAsync(string name) =>
+            await DbSet.FirstOrDefaultAsync(r => r.Name == name);
 
-        public async Task<List<Role>> GetRolesAsync(int userId)
-        {
-            return await _context.UserRoles
-                .Where(ur => ur.UserId == userId)
-                .Select(ur => ur.Role)
+        public async Task<List<Permission>> GetPermissionsAsync(int roleId) =>
+            await _context.RolePermissions
+                .Where(rp => rp.RoleId == roleId)
+                .Select(rp => rp.Permission)
                 .ToListAsync();
-        }
 
-        public async Task<bool> HasRoleAsync(int userId, int roleId)
-        {
-            return await _context.UserRoles
-                .AnyAsync(ur => ur.UserId == userId
-                    && ur.RoleId == roleId);
-        }
+        public async Task AssignPermissionAsync(int roleId, int permissionId) =>
+            await _context.RolePermissions.AddAsync(new RolePermission { RoleId = roleId, PermissionId = permissionId });
 
-        public async Task AssignRoleAsync(int userId, int roleId)
+        public async Task RemovePermissionAsync(int roleId, int permissionId)
         {
-            await _context.UserRoles.AddAsync(new UserRole { UserId = userId, RoleId = roleId });
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task RemoveRoleAsync(int userId, int roleId)
-        {
-            _context.UserRoles.Remove(new UserRole { UserId = userId, RoleId = roleId });
+            _context.RolePermissions.Remove(new RolePermission { RoleId = roleId, PermissionId = permissionId });
             await _context.SaveChangesAsync();
         }
     }

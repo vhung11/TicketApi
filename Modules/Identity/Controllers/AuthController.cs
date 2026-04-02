@@ -19,8 +19,13 @@ namespace TicketApi.Modules.Identity.Controllers
         [HttpPost("register")]
         public async Task<ActionResult> Register([FromBody] RegisterRequestDto request)
         {
-            await _authService.RegisterAsync(request);
-            return Ok();
+            var userId = await _authService.RegisterAsync(request);
+            return StatusCode(201, new 
+            { 
+                Message = "User registered successfully", 
+                UserId = userId, 
+                request.Email 
+            });
         }
 
         [HttpPost("login")]
