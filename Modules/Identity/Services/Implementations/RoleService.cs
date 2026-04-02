@@ -1,5 +1,6 @@
 using TicketApi.Modules.Identity.DTOs;
 using TicketApi.Modules.Identity.Entities;
+using TicketApi.Modules.Identity.Extensions;
 using TicketApi.Modules.Identity.Repositories.Interfaces;
 using TicketApi.Modules.Identity.Services.Interfaces;
 
@@ -22,13 +23,13 @@ namespace TicketApi.Modules.Identity.Services.Implementations
         public async Task<IEnumerable<RoleDto>> GetAllAsync()
         {
             var roles = await _roleRepository.GetAllAsync();
-            return roles.Select(ToDto);
+            return roles.Select(r => r.ToDto());
         }
 
         public async Task<RoleDto> GetByIdAsync(int id)
         {
-            var role = await GetRoleOrThrowAsync(id);
-            return ToDto(role);
+            var role = await _roleRepository.GetRoleOrThrowAsync(id);
+            return role.ToDto();
         }
 
         public async Task<int> CreateAsync(CreateRoleDto request)
@@ -49,70 +50,50 @@ namespace TicketApi.Modules.Identity.Services.Implementations
 
         public async Task UpdateAsync(int id, UpdateRoleDto request)
         {
-            var role = await GetRoleOrThrowAsync(id);
+            var role = await _roleRepository.GetRoleOrThrowAsync(id);
             role.Name = request.Name;
             _roleRepository.Update(role);
         }
 
         public async Task UpdateStatusAsync(int id, UpdateRoleStatusDto request)
         {
-            var role = await GetRoleOrThrowAsync(id);
+            var role = await _roleRepository.GetRoleOrThrowAsync(id);
             role.IsActive = request.IsActive;
             _roleRepository.Update(role);
         }
 
         public async Task DeleteAsync(int id)
         {
-            var role = await GetRoleOrThrowAsync(id);
+            var role = await _roleRepository.GetRoleOrThrowAsync(id);
             _roleRepository.Delete(role);
         }
 
         public async Task<IEnumerable<PermissionDto>> GetPermissionsAsync(int roleId)
         {
-            await GetRoleOrThrowAsync(roleId);
+            await _roleRepository.GetRoleOrThrowAsync(roleId);
             var permissions = await _roleRepository.GetPermissionsAsync(roleId);
-            return permissions.Select(ToDto);
+            return permissions.Select(p => p.ToDto());
         }
 
         public async Task AssignPermissionAsync(int roleId, int permissionId)
         {
-            await GetRoleOrThrowAsync(roleId);
-            await GetPermissionOrThrowAsync(permissionId);
-            _ = await _roleRepository.GetPermissionsAsync(roleId)
-                ?? throw new InvalidOperationException("Role is already assigned this permission.");
+            await _roleRepository.GetRoleOrThrowAsync(roleId);
+            await _permissionRepository.GetPermissionOrThrowAsync(permissionId);
+            var permissions = await _roleRepository.GetPermissionsAsync(roleId);
+            if (permissions.Any(p => p.Id == permissionId))
+                throw new InvalidOperationException("Role is already assigned this permission.");
             await _roleRepository.AssignPermissionAsync(roleId, permissionId);
         }
 
         public async Task RemovePermissionAsync(int roleId, int permissionId)
         {
-            await GetRoleOrThrowAsync(roleId);
-            await GetPermissionOrThrowAsync(permissionId);
-            _ = await _roleRepository.GetPermissionsAsync(roleId)
-                ?? throw new InvalidOperationException("Role is not assigned this permission.");
+            await _roleRepository.GetRoleOrThrowAsync(roleId);
+            await _permissionRepository.GetPermissionOrThrowAsync(permissionId);
+            var permissions = await _roleRepository.GetPermissionsAsync(roleId);
+            if (!permissions.Any(p => p.Id == permissionId))
+                throw new InvalidOperationException("Role is not assigned this permission.");
             await _roleRepository.RemovePermissionAsync(roleId, permissionId);
         }
 
-        private async Task<Role> GetRoleOrThrowAsync(int roleId) =>
-            await _roleRepository.GetByIdAsync(roleId)
-                ?? throw new KeyNotFoundException($"Role with id {roleId} not found.");
-
-        private async Task<Permission> GetPermissionOrThrowAsync(int permissionId) =>
-            await _permissionRepository.GetByIdAsync(permissionId)
-                ?? throw new KeyNotFoundException($"Permission with id {permissionId} not found.");
-
-        private static RoleDto ToDto(Role r) => new()
-        {
-            Id = r.Id,
-            Name = r.Name,
-            IsActive = r.IsActive
-        };
-
-        private static PermissionDto ToDto(Permission p) => new()
-        {
-            Id = p.Id,
-            Code = p.Code,
-            Resource = p.Resource,
-            IsActive = p.IsActive
-        };
     }
 }

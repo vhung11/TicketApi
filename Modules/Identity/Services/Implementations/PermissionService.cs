@@ -1,5 +1,6 @@
 using TicketApi.Modules.Identity.DTOs;
 using TicketApi.Modules.Identity.Entities;
+using TicketApi.Modules.Identity.Extensions;
 using TicketApi.Modules.Identity.Repositories.Interfaces;
 using TicketApi.Modules.Identity.Services.Interfaces;
 
@@ -17,13 +18,13 @@ namespace TicketApi.Modules.Identity.Services.Implementations
         public async Task<IEnumerable<PermissionDto>> GetAllAsync()
         {
             var permissions = await _permissionRepository.GetAllAsync();
-            return permissions.Select(ToDto);
+            return permissions.Select(p => p.ToDto());
         }
 
         public async Task<PermissionDto> GetByIdAsync(int id)
         {
-            var permission = await GetPermissionOrThrowAsync(id);
-            return ToDto(permission);
+            var permission = await _permissionRepository.GetPermissionOrThrowAsync(id);
+            return permission.ToDto();
         }
 
         public async Task<int> CreateAsync(CreatePermissionDto request)
@@ -45,7 +46,7 @@ namespace TicketApi.Modules.Identity.Services.Implementations
 
         public async Task UpdateAsync(int id, UpdatePermissionDto request)
         {
-            var permission = await GetPermissionOrThrowAsync(id);
+            var permission = await _permissionRepository.GetPermissionOrThrowAsync(id);
             permission.Code = request.Code;
             permission.Resource = request.Resource;
             _permissionRepository.Update(permission);
@@ -53,27 +54,16 @@ namespace TicketApi.Modules.Identity.Services.Implementations
 
         public async Task UpdateStatusAsync(int id, UpdatePermissionStatusDto request)
         {
-            var permission = await GetPermissionOrThrowAsync(id);
+            var permission = await _permissionRepository.GetPermissionOrThrowAsync(id);
             permission.IsActive = request.IsActive;
             _permissionRepository.Update(permission);
         }
 
         public async Task DeleteAsync(int id)
         {
-            var permission = await GetPermissionOrThrowAsync(id);
+            var permission = await _permissionRepository.GetPermissionOrThrowAsync(id);
             _permissionRepository.Delete(permission);
         }
 
-        private async Task<Permission> GetPermissionOrThrowAsync(int permissionId) =>
-            await _permissionRepository.GetByIdAsync(permissionId)
-                ?? throw new KeyNotFoundException($"Permission with id {permissionId} not found.");
-
-        private static PermissionDto ToDto(Permission p) => new()
-        {
-            Id = p.Id,
-            Code = p.Code,
-            Resource = p.Resource,
-            IsActive = p.IsActive
-        };
     }
 }
